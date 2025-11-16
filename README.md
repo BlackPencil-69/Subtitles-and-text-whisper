@@ -44,8 +44,7 @@
 
 ### Результат транскрипції
 
-<img src="examples/results.png" width="45%" />
-<img src="examples/results2.png" width="45%" />
+<img src="examples/results.png" alt="Результати 1" width="45%" style="display:inline-block; margin-right: 5%;"> <img src="examples/results2.png" alt="Результати 2" width="45%" style="display:inline-block;">
 
 ## 🚀 Швидкий старт
 
@@ -202,6 +201,7 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 **⭐ Якщо цей проєкт був корисний, поставте зірочку!**
 
 > 🤖 Цей проєкт створено з повним використанням штучного інтелекту для демонстрації можливостей AI у розробці програмного забезпечення.
+
 
 
 
