@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/22853418/README.md)
 # 🎤 Whisper Transcription Web App
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -201,6 +200,7 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 **⭐ Якщо цей проєкт був корисний, поставте зірочку!**
 
 > 🤖 Цей проєкт створено з повним використанням штучного інтелекту для демонстрації можливостей AI у розробці програмного забезпечення.
+
 
 
 
