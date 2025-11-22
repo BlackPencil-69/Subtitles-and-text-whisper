@@ -182,3 +182,4 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 **⭐ If this project was helpful, please give it a star!**
 
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
+
