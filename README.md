@@ -5,60 +5,61 @@
 [![OpenAI Whisper](https://img.shields.io/badge/OpenAI-Whisper-orange.svg)](https://github.com/openai/whisper)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> 🤖 **Увага:** Цей проєкт повністю написаний штучним інтелектом, включаючи весь код та README. Створено для ознайомчих цілей можливостей сучасного AI
+> 🤖 **Attention:** This project was entirely written by Artificial Intelligence, including all code and the README. Created for demonstration purposes of modern AI capabilities.
 
-Веб-додаток для автоматичної транскрипції аудіо та відео файлів з використанням моделі OpenAI Whisper. Підтримує українську, російську, англійську та японську мову.
+A web application for automatic transcription of audio and video files using the OpenAI Whisper model. Supports Ukrainian, Russian, English, and Japanese languages.
 
 ![App Screenshot](examples/interface.png)
 
-## ✨ Можливості
+## ✨ Features
 
-- 🎵 **Підтримка форматів:** WAV, MP3, MP4, AVI, MKV, FLAC, M4A, OGG, WebM
-- 🌍 **Багатомовність:** підтримка 100+ мов
-- 📝 **Генерація субтитрів:** автоматичне створення .SRT файлів
-- 🖱️ **Drag & Drop:** зручне завантаження файлів перетягуванням
-- ⚡ **Прогрес-бар:** відстеження процесу транскрипції в реальному часі
-- 🎯 **Вибір моделі:** від швидких до найточніших варіантів
+- 🎵 **Format Support:** WAV, MP3, MP4, AVI, MKV, FLAC, M4A, OGG, WebM
+- 🌍 **Multilingual:** Supports 100+ languages
+- 📝 **Subtitle Generation:** Automatic creation of .SRT files
+- 🖱️ **Drag & Drop:** Convenient file uploading via drag and drop
+- ⚡ **Progress Bar:** Real-time tracking of the transcription process
+- 🎯 **Model Selection:** From fast to the most accurate options
 
-## 🧠 Моделі Whisper
+## 🧠 Whisper Models
 
-| Модель | Швидкість | Точність | Пам'ять (RAM) | VRAM | Рекомендації |
+| Model | Speed | Accuracy | Memory (RAM) | VRAM | Recommendations |
 |--------|-----------|----------|---------------|------|--------------|
-| `tiny` | ⚡⚡⚡⚡ | 🟡 середня | ~1 GB | - | Для швидких тестів і коротких файлів |
-| `base` | ⚡⚡⚡ | 🟢 добра | ~2 GB | - | **Оптимальний вибір** для більшості випадків |
-| `small` | ⚡⚡ | 🟢 висока | ~3 GB | - | Якщо потрібна краща точність |
-| `medium` | ⚡ | 🟢 дуже висока | ~5 GB | 2GB | Для професійної транскрипції |
-| `large` | 🐢 | 🟢 найкраща | ~10 GB | 5GB | Максимальна якість (потрібна потужна система) |
+| `tiny` | ⚡⚡⚡⚡ | 🟡 Average | ~1 GB | - | For quick tests and short files |
+| `base` | ⚡⚡⚡ | 🟢 Good | ~2 GB | - | **Optimal choice** for most cases |
+| `small` | ⚡⚡ | 🟢 High | ~3 GB | - | If better accuracy is needed |
+| `medium` | ⚡ | 🟢 Very High | ~5 GB | 2GB | For professional transcription |
+| `large` | 🐢 | 🟢 Best | ~10 GB | 5GB | Maximum quality (requires a powerful system) |
 
-### 💡 Вибір моделі залежно від ваших ресурсів:
+### 💡 Choosing a Model Based on Your Resources:
 
-- **4 GB RAM:** використовуйте `tiny` або `base`
-- **8 GB RAM:** можна використовувати `small` або `medium`
-- **16+ GB RAM:** доступні всі моделі, включаючи `large`
-- **GPU NVIDIA:** значно прискорює роботу всіх моделей (автоматично використовується, якщо доступна)
+- **4 GB RAM:** Use `tiny` or `base`
+- **8 GB RAM:** You can use `small` or `medium`
+- **16+ GB RAM:** All models are available, including `large`
+- **NVIDIA GPU:** Significantly speeds up the work of all models (automatically used if available)
 
-> ⚠️ **Примітка:** Моделі `medium` та `large` працюватимуть повільно без достатньо потужного процесора або GPU. Для більшості завдань рекомендується модель `base`.
+> ⚠️ **Note:** The `medium` and `large` models will run slowly without a sufficiently powerful CPU or GPU. The `base` model is recommended for most tasks.
 
-## 📸 Приклади роботи
+## 📸 Work Examples
 
-### Результат транскрипції
+### Transcription Result
 
-<img src="examples/results.png" alt="Результати 1" width="45%" style="display:inline-block; margin-right: 5%;"> <img src="examples/results2.png" alt="Результати 2" width="45%" style="display:inline-block;">
+<img src="examples/results.png" width="45%" />
+<img src="examples/results2.png" width="45%" />
 
-## 🚀 Швидкий старт
+## 🚀 Quick Start
 
-### Вимоги
+### Requirements
 
-- Python 3.11 (Обов'язково, інакше не працюватиме)
-- FFmpeg (для обробки відео)
-- 4+ GB RAM (залежно від моделі)
+- Python 3.11 (Mandatory, otherwise it will not work)
+- FFmpeg (for video processing)
+- 4+ GB RAM (depending on the model)
 
-### Встановлення FFmpeg
+### Installing FFmpeg
 
 **Windows:**
 ```bash
-# Завантажте з https://ffmpeg.org/download.html
-# Або через Chocolatey:
+# Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+# Or via Chocolatey:
 choco install ffmpeg
 ```
 
@@ -72,21 +73,18 @@ brew install ffmpeg
 sudo apt-get update
 sudo apt-get install ffmpeg
 ```
+### Installing the Application
 
-### Встановлення додатку
-
-1. **Клонуйте репозиторій:**
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/BlackPencil-69/Whisper-Transcription-Web-App.git
 cd Whisper-Transcription-Web-App
 ```
-
-2. **Створіть віртуальне середовище:**
+2. **Create a virtual environment:**
 ```bash
 py -3.11 -m venv venv
 ```
-
-3. **Активуйте віртуальне середовище:**
+3. **Activate the virtual environment:**
 
 **Windows:**
 ```bash
@@ -97,99 +95,83 @@ venv\Scripts\activate
 ```bash
 source venv/bin/activate
 ```
-
-4. **Встановіть залежності:**
+4. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
-
-5. **Запустіть сервер:**
+5. **Start the server:**
 ```bash
 python app.py
 ```
-
-6. **Відкрийте браузер:**
+6. **Open in browser:**
 ```
 http://localhost:5000
 ```
 
-### 📱 Доступ з мобільного пристрою
+### 📱 Access from a mobile device
+To access from a phone on a local network:
 
-Для доступу з телефону в локальній мережі:
+open the link generated in the terminal
+Example: `Running on http://192.168.0.104:5000`
 
-1. Дізнайтесь IP-адресу вашого комп'ютера:
-   - **Windows:** `ipconfig` (шукайте IPv4 Address)
-   - **macOS/Linux:** `ifconfig` або `ip addr`
+## 📖 How to use
 
-2. На телефоні відкрийте: `http://<IP-вашого-комп'ютера>:5000`
+1. **Upload file:** Drag and drop your audio/video file or click to select
+2. **Select language:** Ukrainian, English, Japanese of other
+3. **Select model:** From `tiny` (fast) to `large` (most accurate)
+4. **Click “Start transcription”**
+5. **Wait for the result:** The progress bar will show the current status
+6. **Copy the text** or **download .SRT subtitles**
 
-Приклад: `http://192.168.1.100:5000`
-
-## 📖 Використання
-
-1. **Завантажте файл:** Перетягніть аудіо/відео файл або натисніть для вибору
-2. **Оберіть мову:** Українська, російська, англійська, японська
-3. **Оберіть модель:** Від `tiny` (швидка) до `large` (найточніша)
-4. **Натисніть "Почати транскрипцію"**
-5. **Дочекайтесь результату:** Прогрес-бар покаже поточний стан
-6. **Скопіюйте текст** або **завантажте .SRT субтитри**
-
-## 🔧 Технології
-
+## 🔧 Technologies
 - **Backend:** Flask (Python)
+
 - **AI Model:** OpenAI Whisper
+
 - **Media Processing:** FFmpeg
+
 - **Frontend:** HTML5, CSS3, JavaScript (Vanilla)
+
 - **UI/UX:** Responsive design, Drag & Drop API
 
-## ⚙️ Конфігурація
+## 🐛 Troubleshooting
 
-Основні налаштування в `app.py`:
-
-```python
-UPLOAD_FOLDER = 'uploads'  # Папка для тимчасових файлів
-MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB максимальний розмір
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'mp4', 'avi', 'mkv', 'flac', 'm4a', 'ogg', 'webm'}
-```
-
-## 🐛 Вирішення проблем
-
-### FFmpeg не знайдено
+### FFmpeg not found
 ```bash
-# Перевірте встановлення:
+# Check your installation:
 ffmpeg -version
 
-# Якщо не працює, встановіть знову або додайте до PATH
+# If it doesn't work, reinstall or add it to your PATH
 ```
 
-### Помилка пам'яті (MemoryError)
-- Використовуйте меншу модель (`tiny` або `base`)
-- Закрийте інші програми
-- Спробуйте файл меншого розміру
+### Memory error (MemoryError)
+- Use a smaller model (`tiny` or `base`)
+- Close other programs
+- Try a smaller file
 
-### Повільна транскрипція
-- Використовуйте меншу модель
-- Перевірте, чи використовується GPU (якщо доступна)
-- Зменшіть розмір файлу
+### Slow transcription
+- Use a smaller model
+- Check if GPU is being used (if available)
+- Reduce file size
 
-### Файл не завантажується
-- Перевірте формат файлу (має бути в списку підтримуваних)
-- Перевірте розмір (максимум 500MB)
-- Переконайтесь, що файл не пошкоджений
+### File not loading
+- Check the file format (it must be on the list of supported formats)
+- Check the size (maximum 500MB)
+- Make sure the file is not corrupted
 
 
-## 📝 Ліцензія
+## 📝 License
 
-Цей проєкт розповсюджується під ліцензією MIT. Дивіться файл `LICENSE` для деталей.
+This project is distributed under the MIT license. See the `LICENSE` file for details.
 
-## 🙏 Подяки
+## 🙏 Acknowledgements
 
-- [OpenAI Whisper](https://github.com/openai/whisper) - за чудову модель розпізнавання мовлення
-- [Flask](https://flask.palletsprojects.com/) - за простий та потужний веб-фреймворк
-- [FFmpeg](https://ffmpeg.org/) - за обробку медіафайлів
-- [Claude](https://claude.ai/) - за основний код
-- [ChatGPT](https://chatgpt.com/) - за виправлення помилок
-## 📧 Контакти
+- [OpenAI Whisper](https://github.com/openai/whisper) - for the excellent speech recognition model
+- [Flask](https://flask.palletsprojects.com/) - for a simple and powerful web framework
+- [FFmpeg](https://ffmpeg.org/) - for media file processing
+- [Claude](https://claude.ai/) - for the core code
+- [ChatGPT](https://chatgpt.com/) - for bug fixes
+## 📧 Contact
 
 GitHub: [@BlackPencil-69](https://github.com/BlackPencil-69/)
 
@@ -197,11 +179,6 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 
 ---
 
-**⭐ Якщо цей проєкт був корисний, поставте зірочку!**
+**⭐ If this project was helpful, please give it a star!**
 
-> 🤖 Цей проєкт створено з повним використанням штучного інтелекту для демонстрації можливостей AI у розробці програмного забезпечення.
-
-
-
-
-
+> 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
