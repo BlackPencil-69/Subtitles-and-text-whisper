@@ -7,7 +7,7 @@
 
 > 🤖 **Attention:** This project was entirely written by Artificial Intelligence, including all code and the README. Created for demonstration purposes of modern AI capabilities.
 
-A web application for automatic transcription of audio and video files using the OpenAI Whisper model. Supports Ukrainian, Russian, English, and Japanese languages.
+A web application for automatic transcription of audio and video files using the OpenAI Whisper model. support for 100+ languages.
 
 ![App Screenshot](examples/interface.png)
 
@@ -182,4 +182,5 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 **⭐ If this project was helpful, please give it a star!**
 
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
+
 
