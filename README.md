@@ -51,7 +51,7 @@ A web application for automatic transcription of audio and video files using the
 ### Requirements
 
 - Python 3.11 (Mandatory, otherwise it will not work)
-- FFmpeg (for video processing)
+- FFmpeg (for video processing) must be installed and available in your system PATH
 - 4+ GB RAM (depending on the model)
 
 ### Installing FFmpeg
@@ -182,5 +182,6 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 **⭐ If this project was helpful, please give it a star!**
 
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
+
 
 
