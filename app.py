@@ -1,6 +1,6 @@
 """
 Whisper Transcription Web Application
-Веб-додаток для транскрипції аудіо/відео файлів з точними таймкодами
+Web application for transcribing audio/video files with accurate timestamps
 """
 
 import os
@@ -33,43 +33,43 @@ progress_data = {}
 models_cache = {}
 
 def allowed_file(filename):
-    """Перевіряє чи дозволений формат файлу"""
+    """Checks if the file format is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_audio(video_path, audio_path):
-    """Витягує аудіо з відео файлу"""
+    """Extracts audio from a video file"""
     try:
-        logger.info(f"Конвертація відео: {video_path} -> {audio_path}")
+        logger.info(f"Video conversion: {video_path} -> {audio_path}")
         result = subprocess.run([
             'ffmpeg', '-i', video_path, 
             '-vn', '-acodec', 'pcm_s16le', 
             '-ar', '16000', '-ac', '1', 
             audio_path, '-y'
         ], check=True, capture_output=True, text=True)
-        logger.info("Конвертація успішна")
+        logger.info("Conversion successful")
         return True
     except subprocess.CalledProcessError as e:
-        logger.error(f"Помилка конвертації: {e.stderr}")
+        logger.error(f"Conversion error: {e.stderr}")
         return False
     except FileNotFoundError:
-        logger.error("FFmpeg не знайдено. Встановіть FFmpeg: sudo apt-get install ffmpeg")
+        logger.error("FFmpeg not found. Install FFmpeg: sudo apt-get install ffmpeg")
         return False
 
 def load_whisper_model(model_size="base"):
-    """Завантажує модель Whisper (з кешуванням)"""
+    """Loads the Whisper model (with caching)"""
     try:
         if model_size not in models_cache:
-            logger.info(f"Завантаження моделі Whisper: {model_size}")
+            logger.info(f"Loading Whisper model: {model_size}")
             models_cache[model_size] = whisper.load_model(model_size)
-            logger.info(f"Модель {model_size} завантажена успішно")
+            logger.info(f"Model {model_size} loaded successfully")
         return models_cache[model_size]
     except Exception as e:
-        logger.error(f"Помилка завантаження моделі: {e}")
+        logger.error(f"Model loading error: {e}")
         raise
 
 def detect_speech_boundaries(audio_path, segments):
     """
-    Визначає точні межі мовлення за допомогою аналізу енергії аудіо
+    Determines accurate speech boundaries using audio energy analysis
     """
     try:
         import librosa
@@ -140,19 +140,19 @@ def detect_speech_boundaries(audio_path, segments):
                 refined_segments[i]['end'] = gap - 0.05
                 refined_segments[i + 1]['start'] = gap + 0.05
         
-        logger.info(f"Визначено точні межі мовлення для {len(refined_segments)} сегментів")
+        logger.info(f"Accurate speech boundaries determined for {len(refined_segments)} segments")
         return refined_segments
         
     except ImportError:
-        logger.warning("librosa не встановлено. Використовується базовий алгоритм")
+        logger.warning("librosa is not installed. Using basic algorithm")
         return basic_speech_detection(segments)
     except Exception as e:
-        logger.error(f"Помилка визначення меж мовлення: {e}")
+        logger.error(f"Speech boundary detection error: {e}")
         return basic_speech_detection(segments)
 
 def basic_speech_detection(segments):
     """
-    Базовий алгоритм коригування таймкодів без librosa
+    Basic timestamp adjustment algorithm without librosa
     """
     refined_segments = []
     
@@ -188,7 +188,7 @@ def basic_speech_detection(segments):
     return refined_segments
 
 def generate_srt(segments):
-    """Генерує SRT формат субтитрів"""
+    """Generates SRT subtitle format"""
     srt_lines = []
     
     for i, segment in enumerate(segments, 1):
@@ -204,7 +204,7 @@ def generate_srt(segments):
     return '\n'.join(srt_lines)
 
 def format_timestamp_srt(seconds):
-    """Форматує секунди в SRT формат (HH:MM:SS,mmm)"""
+    """Formats seconds to SRT format (HH:MM:SS,mmm)"""
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -213,14 +213,14 @@ def format_timestamp_srt(seconds):
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 def transcribe_audio(file_path, language, model_size, task_id):
-    """Функція транскрипції з прогресом"""
+    """Transcription function with progress reporting"""
     try:
-        logger.info(f"Початок транскрипції: {file_path}, мова: {language}, модель: {model_size}")
+        logger.info(f"Starting transcription: {file_path}, language: {language}, model: {model_size}")
         
         progress_data[task_id] = {
             'status': 'loading_model',
             'progress': 10,
-            'message': 'Завантаження моделі...'
+            'message': 'Loading model...'
         }
         
         model = load_whisper_model(model_size)
@@ -228,7 +228,7 @@ def transcribe_audio(file_path, language, model_size, task_id):
         progress_data[task_id] = {
             'status': 'processing',
             'progress': 30,
-            'message': 'Обробка аудіо...'
+            'message': 'Processing audio...'
         }
         
         transcribe_options = {
@@ -242,12 +242,12 @@ def transcribe_audio(file_path, language, model_size, task_id):
         
         result = model.transcribe(file_path, **transcribe_options)
         
-        logger.info(f"Транскрипція завершена. Знайдено {len(result.get('segments', []))} сегментів")
+        logger.info(f"Transcription complete. Found {len(result.get('segments', []))} segments")
         
         progress_data[task_id] = {
             'status': 'refining',
             'progress': 70,
-            'message': 'Визначення меж мовлення...'
+            'message': 'Determining speech boundaries...'
         }
         
         raw_segments = result.get('segments', [])
@@ -256,7 +256,7 @@ def transcribe_audio(file_path, language, model_size, task_id):
         progress_data[task_id] = {
             'status': 'formatting',
             'progress': 90,
-            'message': 'Форматування результату...'
+            'message': 'Formatting result...'
         }
         
         full_text = result['text'].strip()
@@ -273,12 +273,12 @@ def transcribe_audio(file_path, language, model_size, task_id):
         
         srt_content = generate_srt(refined_segments)
         
-        detected_language = result.get('language', 'невідома')
+        detected_language = result.get('language', 'unknown')
         
         progress_data[task_id] = {
             'status': 'completed',
             'progress': 100,
-            'message': 'Готово!',
+            'message': 'Done!',
             'result': {
                 'full_text': full_text,
                 'timestamped_text': timestamped_output,
@@ -288,25 +288,25 @@ def transcribe_audio(file_path, language, model_size, task_id):
             }
         }
         
-        logger.info(f"Транскрипція успішно завершена для задачі {task_id}")
+        logger.info(f"Transcription successfully completed for task {task_id}")
         
     except Exception as e:
-        logger.error(f"Помилка транскрипції: {e}", exc_info=True)
+        logger.error(f"Transcription error: {e}", exc_info=True)
         progress_data[task_id] = {
             'status': 'error',
             'progress': 0,
-            'message': f'Помилка: {str(e)}'
+            'message': f'Error: {str(e)}'
         }
     finally:
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                logger.info(f"Файл видалено: {file_path}")
+                logger.info(f"File deleted: {file_path}")
         except Exception as e:
-            logger.error(f"Помилка видалення файлу: {e}")
+            logger.error(f"File deletion error: {e}")
 
 def format_timestamp(seconds):
-    """Форматує секунди в HH:MM:SS формат"""
+    """Formats seconds to HH:MM:SS format"""
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -325,17 +325,17 @@ def index():
 def upload_file():
     try:
         if 'file' not in request.files:
-            return jsonify({'error': 'Файл не знайдено'}), 400
+            return jsonify({'error': 'File not found'}), 400
         
         file = request.files['file']
         language = request.form.get('language', 'uk')
         model_size = request.form.get('model_size', 'base')
         
         if file.filename == '':
-            return jsonify({'error': 'Файл не обрано'}), 400
+            return jsonify({'error': 'No file selected'}), 400
         
         if not allowed_file(file.filename):
-            return jsonify({'error': 'Непідтримуваний формат файлу'}), 400
+            return jsonify({'error': 'Unsupported file format'}), 400
         
         task_id = str(int(time.time() * 1000))
         
@@ -343,7 +343,7 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{task_id}_{filename}")
         file.save(file_path)
         
-        logger.info(f"Файл збережено: {file_path}")
+        logger.info(f"File saved: {file_path}")
         
         file_ext = filename.rsplit('.', 1)[1].lower()
         if file_ext in {'mp4', 'avi', 'mkv', 'webm'}:
@@ -351,13 +351,13 @@ def upload_file():
             progress_data[task_id] = {
                 'status': 'converting',
                 'progress': 5,
-                'message': 'Конвертація відео в аудіо...'
+                'message': 'Converting video to audio...'
             }
             if extract_audio(file_path, audio_path):
                 os.remove(file_path)
                 file_path = audio_path
             else:
-                return jsonify({'error': 'Помилка конвертації відео. Перевірте чи встановлений FFmpeg.'}), 500
+                return jsonify({'error': 'Video conversion error. Check if FFmpeg is installed.'}), 500
         
         thread = threading.Thread(
             target=transcribe_audio,
@@ -369,42 +369,42 @@ def upload_file():
         return jsonify({'task_id': task_id})
     
     except Exception as e:
-        logger.error(f"Помилка при завантаженні: {e}", exc_info=True)
-        return jsonify({'error': f'Помилка сервера: {str(e)}'}), 500
+        logger.error(f"Upload error: {e}", exc_info=True)
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/progress/<task_id>')
 def get_progress(task_id):
     if task_id in progress_data:
         return jsonify(progress_data[task_id])
-    return jsonify({'status': 'not_found', 'progress': 0, 'message': 'Задачу не знайдено'}), 404
+    return jsonify({'status': 'not_found', 'progress': 0, 'message': 'Task not found'}), 404
 
 @app.route('/health')
 def health():
-    """Перевірка здоров'я сервера"""
+    """Server health check"""
     return jsonify({'status': 'ok', 'models_loaded': list(models_cache.keys())})
 
 if __name__ == '__main__':
     try:
         import numpy as np
-        logger.info(f"NumPy версія: {np.__version__}")
+        logger.info(f"NumPy version: {np.__version__}")
     except ImportError:
-        logger.error("NumPy не встановлено! Встановіть: pip install numpy")
+        logger.error("NumPy not installed! Install: pip install numpy")
         sys.exit(1)
     
     try:
         import librosa
-        logger.info(f"librosa версія: {librosa.__version__} (для точного визначення меж мовлення)")
+        logger.info(f"librosa version: {librosa.__version__} (for accurate speech boundary detection)")
     except ImportError:
-        logger.warning("librosa не встановлено. Буде використано базовий алгоритм.")
-        logger.warning("Для кращих результатів встановіть: pip install librosa")
+        logger.warning("librosa is not installed. Basic algorithm will be used.")
+        logger.warning("For better results install: pip install librosa")
     
     try:
-        logger.info(f"OpenAI Whisper завантажено успішно")
+        logger.info(f"OpenAI Whisper loaded successfully")
     except Exception as e:
-        logger.error(f"Помилка з Whisper: {e}")
+        logger.error(f"Whisper error: {e}")
         sys.exit(1)
     
-    logger.info("Сервер запускається на http://0.0.0.0:5000")
-    logger.info("Доступ з телефону: http://<IP-вашого-комп'ютера>:5000")
+    logger.info("Server starting on http://0.0.0.0:5000")
+    logger.info("Access from phone: http://<your-computer-IP>:5000")
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
