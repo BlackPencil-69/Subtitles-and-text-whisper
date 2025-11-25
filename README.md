@@ -113,8 +113,8 @@ http://localhost:5000
 ### 📱 Access from a mobile device
 To access from a phone on a local network:
 
-open the link generated in the terminal
-Example: `Running on http://192.168.0.104:5000`
+open the link generated in the terminal.
+Example: `Running on http://192.168.0.100:50000`
 
 ## 📖 How to use
 
@@ -186,6 +186,7 @@ Project Link: [https://github.com/BlackPencil-69/Subtitles-and-text-whisper](htt
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 
 
