@@ -7,7 +7,7 @@
 
 > 🤖 **Attention:** This project was entirely written by Artificial Intelligence, including all code and the README. Created for demonstration purposes of modern AI capabilities.
 
-A web application for automatic transcription of audio and video files using the OpenAI Whisper model. support for 100+ languages.
+A full-featured web application for **automatic subtitle generation** (.SRT) and **high-accuracy text extraction** from any audio or video files. It uses the powerful OpenAI Whisper model and **supports 100+ languages.**
 
 ![App Screenshot](examples/interface.png)
 
@@ -43,8 +43,10 @@ A web application for automatic transcription of audio and video files using the
 
 ### Transcription Result
 
-<img src="examples/results.png" width="45%" />
-<img src="examples/results2.png" width="45%" />
+<p float="left">
+  <img src="examples/results.png" width="45%" />
+  <img src="examples/results2.png" width="45%" />
+</p>
 
 ## 🚀 Quick Start
 
@@ -77,8 +79,8 @@ sudo apt-get install ffmpeg
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/BlackPencil-69/Whisper-Transcription-Web-App.git
-cd Whisper-Transcription-Web-App
+git clone https://github.com/BlackPencil-69/Subtitles-and-text-whisper.git
+cd Subtitles-and-text-whisper
 ```
 2. **Create a virtual environment:**
 ```bash
@@ -175,7 +177,7 @@ This project is distributed under the MIT license. See the `LICENSE` file for de
 
 GitHub: [@BlackPencil-69](https://github.com/BlackPencil-69/)
 
-Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](https://github.com/BlackPencil-69/Whisper-Transcription-Web-App)
+Project Link: [https://github.com/BlackPencil-69/Subtitles-and-text-whisper](https://github.com/BlackPencil-69/Subtitles-and-text-whisper)
 
 ---
 
@@ -183,6 +185,7 @@ Project Link: [https://github.com/BlackPencil-69/Whisper-Transcription-Web-App](
 
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
