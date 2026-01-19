@@ -60,7 +60,7 @@ A full-featured web application for **automatic subtitle generation** (.SRT) and
 
 **Windows:**
 ```bash
-# Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+# Download from https://ffmpeg.org/download.html
 # Or via Chocolatey:
 choco install ffmpeg
 ```
@@ -188,6 +188,7 @@ Discord: [@anonym_pro](https://discord.com/users/1149264703470698529)
 > 🤖 This project was created using artificial intelligence to demonstrate the capabilities of AI in software development.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 
 
