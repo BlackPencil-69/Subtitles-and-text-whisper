@@ -1,16 +1,10 @@
-"""
-Whisper Transcription Web Application
-Web application for transcribing audio/video files with accurate timestamps
-"""
-
 import os
 import sys
 import whisper
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import threading
 import time
-from pathlib import Path
 import subprocess
 import logging
 import numpy as np
@@ -21,11 +15,13 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'mp4', 'avi', 'mkv', 'flac', 'm4a', 'ogg', 'webm'}
+ALLOWED_EXTENSIONS = {'wav', 'mp3', 'mp4', 'avi', 'mkv', 'flac', 'm4a', 'ogg', 'webm', 'mov'}
 MAX_FILE_SIZE = 500 * 1024 * 1024
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+app.config['MAX_CONTENT_PATH'] = None
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -33,14 +29,14 @@ progress_data = {}
 models_cache = {}
 
 def allowed_file(filename):
-    """Checks if the file format is allowed"""
+    """Checks allowed file formats"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_audio(video_path, audio_path):
-    """Extracts audio from a video file"""
+    """Extracts audio from video using FFmpeg"""
     try:
         logger.info(f"Video conversion: {video_path} -> {audio_path}")
-        result = subprocess.run([
+        subprocess.run([
             'ffmpeg', '-i', video_path, 
             '-vn', '-acodec', 'pcm_s16le', 
             '-ar', '16000', '-ac', '1', 
@@ -56,7 +52,7 @@ def extract_audio(video_path, audio_path):
         return False
 
 def load_whisper_model(model_size="base"):
-    """Loads the Whisper model (with caching)"""
+    """Loads Whisper model with caching"""
     try:
         if model_size not in models_cache:
             logger.info(f"Loading Whisper model: {model_size}")
@@ -67,37 +63,57 @@ def load_whisper_model(model_size="base"):
         logger.error(f"Model loading error: {e}")
         raise
 
+def split_segments_by_length(segments, max_words=5, max_chars=35):
+    """
+    Splits long Whisper segments into smaller chunks based on word timestamps.
+    """
+    new_segments = []
+    
+    for segment in segments:
+        if 'words' not in segment or not segment['words']:
+            new_segments.append(segment)
+            continue
+            
+        words = segment['words']
+        current_chunk = []
+        current_chars = 0
+        
+        for i, word_data in enumerate(words):
+            word_text = word_data['word']
+            current_chunk.append(word_data)
+            current_chars += len(word_text)
+            
+            if len(current_chunk) >= max_words or current_chars >= max_chars or i == len(words) - 1:
+                new_segments.append({
+                    'start': current_chunk[0]['start'],
+                    'end': current_chunk[-1]['end'],
+                    'text': ''.join([w['word'] for w in current_chunk]).strip()
+                })
+                current_chunk = []
+                current_chars = 0
+                
+    return new_segments
+
 def detect_speech_boundaries(audio_path, segments):
-    """
-    Determines accurate speech boundaries using audio energy analysis
-    """
+    """Refines speech boundaries using audio energy analysis"""
     try:
         import librosa
-        
         audio, sr = librosa.load(audio_path, sr=16000)
-        
         frame_length = 2048
         hop_length = 512
-        
         energy = librosa.feature.rms(y=audio, frame_length=frame_length, hop_length=hop_length)[0]
-        
         times = librosa.frames_to_time(range(len(energy)), sr=sr, hop_length=hop_length)
-        
         threshold = np.percentile(energy, 20)
         
         refined_segments = []
-        
         for segment in segments:
             start = segment.get('start', 0)
             end = segment.get('end', 0)
             text = segment.get('text', '').strip()
-            
-            if not text:
-                continue
+            if not text: continue
             
             search_window_start = max(0, start - 0.5)
             search_window_end = min(len(audio) / sr, end + 0.5)
-            
             start_idx = np.searchsorted(times, search_window_start)
             end_idx = np.searchsorted(times, search_window_end)
             
@@ -105,11 +121,7 @@ def detect_speech_boundaries(audio_path, segments):
             segment_times = times[start_idx:end_idx]
             
             if len(segment_energy) == 0:
-                refined_segments.append({
-                    'start': start,
-                    'end': end,
-                    'text': text
-                })
+                refined_segments.append({'start': start, 'end': end, 'text': text})
                 continue
             
             speech_mask = segment_energy > threshold
@@ -118,21 +130,15 @@ def detect_speech_boundaries(audio_path, segments):
             if len(speech_indices) > 0:
                 actual_start = segment_times[speech_indices[0]]
                 actual_end = segment_times[speech_indices[-1]]
-                
                 actual_start = max(start - 0.3, actual_start)
                 actual_end = min(end + 0.2, actual_end + 0.3)
             else:
-                actual_start = start
-                actual_end = end
+                actual_start, actual_end = start, end
             
             if actual_end - actual_start < 0.2:
                 actual_end = actual_start + 0.2
             
-            refined_segments.append({
-                'start': actual_start,
-                'end': actual_end,
-                'text': text
-            })
+            refined_segments.append({'start': actual_start, 'end': actual_end, 'text': text})
         
         for i in range(len(refined_segments) - 1):
             if refined_segments[i]['end'] > refined_segments[i + 1]['start']:
@@ -140,182 +146,93 @@ def detect_speech_boundaries(audio_path, segments):
                 refined_segments[i]['end'] = gap - 0.05
                 refined_segments[i + 1]['start'] = gap + 0.05
         
-        logger.info(f"Accurate speech boundaries determined for {len(refined_segments)} segments")
         return refined_segments
-        
-    except ImportError:
-        logger.warning("librosa is not installed. Using basic algorithm")
-        return basic_speech_detection(segments)
     except Exception as e:
         logger.error(f"Speech boundary detection error: {e}")
         return basic_speech_detection(segments)
 
 def basic_speech_detection(segments):
-    """
-    Basic timestamp adjustment algorithm without librosa
-    """
+    """Basic timestamp correction algorithm"""
     refined_segments = []
-    
     for segment in segments:
-        start = segment.get('start', 0)
-        end = segment.get('end', 0)
-        text = segment.get('text', '').strip()
+        start, end, text = segment.get('start', 0), segment.get('end', 0), segment.get('text', '').strip()
+        if not text: continue
         
-        if not text:
-            continue
+        adjusted_start = start + 0.1
+        adjusted_end = max(adjusted_start + 0.2, end - 0.05)
         
-        duration = end - start
-        words_count = len(text.split())
-        
-        if duration < 0.5:
-            adjusted_start = start + 0.05
-            adjusted_end = end
-        elif words_count <= 2 and duration > 2:
-            adjusted_start = start + 0.15
-            adjusted_end = start + min(duration * 0.6, 1.5)
-        else:
-            adjusted_start = start + 0.1
-            adjusted_end = end - 0.05
-        
-        adjusted_end = max(adjusted_start + 0.2, adjusted_end)
-        
-        refined_segments.append({
-            'start': adjusted_start,
-            'end': adjusted_end,
-            'text': text
-        })
-    
+        refined_segments.append({'start': adjusted_start, 'end': adjusted_end, 'text': text})
     return refined_segments
 
 def generate_srt(segments):
-    """Generates SRT subtitle format"""
+    """Generates SRT format"""
     srt_lines = []
-    
     for i, segment in enumerate(segments, 1):
         start = format_timestamp_srt(segment['start'])
         end = format_timestamp_srt(segment['end'])
-        text = segment['text']
-        
-        srt_lines.append(f"{i}")
-        srt_lines.append(f"{start} --> {end}")
-        srt_lines.append(text)
-        srt_lines.append("")
-    
+        srt_lines.append(f"{i}\n{start} --> {end}\n{segment['text']}\n")
     return '\n'.join(srt_lines)
 
 def format_timestamp_srt(seconds):
-    """Formats seconds to SRT format (HH:MM:SS,mmm)"""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+    """Format: HH:MM:SS,mmm"""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    millis = int((secs % 1) * 1000)
+    return f"{int(hours):02d}:{int(minutes):02d}:{int(secs):02d},{millis:03d}"
 
-def transcribe_audio(file_path, language, model_size, task_id):
-    """Transcription function with progress reporting"""
+def transcribe_audio(file_path, language, model_size, task_id, max_words):
+    """Main transcription process with dynamic segment length"""
     try:
-        logger.info(f"Starting transcription: {file_path}, language: {language}, model: {model_size}")
-        
-        progress_data[task_id] = {
-            'status': 'loading_model',
-            'progress': 10,
-            'message': 'Loading model...'
-        }
-        
+        progress_data[task_id] = {'status': 'loading_model', 'progress': 10, 'message': 'Loading model...'}
         model = load_whisper_model(model_size)
         
-        progress_data[task_id] = {
-            'status': 'processing',
-            'progress': 30,
-            'message': 'Processing audio...'
-        }
+        should_split = int(max_words) < 25
+        
+        progress_data[task_id] = {'status': 'processing', 'progress': 30, 'message': 'Processing audio...'}
         
         transcribe_options = {
             'verbose': False,
             'task': 'transcribe',
-            'word_timestamps': False
+            'word_timestamps': True
         }
-        
         if language and language != 'auto':
             transcribe_options['language'] = language
         
         result = model.transcribe(file_path, **transcribe_options)
         
-        logger.info(f"Transcription complete. Found {len(result.get('segments', []))} segments")
-        
-        progress_data[task_id] = {
-            'status': 'refining',
-            'progress': 70,
-            'message': 'Determining speech boundaries...'
-        }
-        
         raw_segments = result.get('segments', [])
-        refined_segments = detect_speech_boundaries(file_path, raw_segments)
+
+        if should_split:
+            limit = int(max_words)
+            progress_data[task_id] = {'status': 'refining', 'progress': 70, 'message': f'Splitting into {limit} words...'}
+            processed_segments = split_segments_by_length(raw_segments, max_words=limit, max_chars=limit*7)
+        else:
+            progress_data[task_id] = {'status': 'refining', 'progress': 70, 'message': 'Refining original segments...'}
+            processed_segments = raw_segments
         
-        progress_data[task_id] = {
-            'status': 'formatting',
-            'progress': 90,
-            'message': 'Formatting result...'
-        }
+        refined_segments = detect_speech_boundaries(file_path, processed_segments)
         
-        full_text = result['text'].strip()
-        
-        timestamped_text = []
-        for segment in refined_segments:
-            start_time = format_timestamp(segment['start'])
-            end_time = format_timestamp(segment['end'])
-            text = segment['text']
-            
-            timestamped_text.append(f"[{start_time} → {end_time}] {text}")
-        
-        timestamped_output = '\n'.join(timestamped_text) if timestamped_text else full_text
-        
-        srt_content = generate_srt(refined_segments)
-        
-        detected_language = result.get('language', 'unknown')
-        
-        progress_data[task_id] = {
-            'status': 'completed',
-            'progress': 100,
-            'message': 'Done!',
-            'result': {
-                'full_text': full_text,
-                'timestamped_text': timestamped_output,
-                'srt_subtitles': srt_content,
-                'detected_language': detected_language,
-                'segments_count': len(refined_segments)
-            }
-        }
-        
-        logger.info(f"Transcription successfully completed for task {task_id}")
+        progress_data[task_id] = {'status': 'completed', 'progress': 100, 'message': 'Done!', 'result': {
+            'full_text': result['text'].strip(),
+            'timestamped_text': '\n'.join([f"[{format_timestamp(s['start'])} → {format_timestamp(s['end'])}] {s['text']}" for s in refined_segments]),
+            'srt_subtitles': generate_srt(refined_segments),
+            'detected_language': result.get('language', 'unknown'),
+            'segments_count': len(refined_segments)
+        }}
         
     except Exception as e:
         logger.error(f"Transcription error: {e}", exc_info=True)
-        progress_data[task_id] = {
-            'status': 'error',
-            'progress': 0,
-            'message': f'Error: {str(e)}'
-        }
+        progress_data[task_id] = {'status': 'error', 'progress': 0, 'message': f'Error: {str(e)}'}
     finally:
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                logger.info(f"File deleted: {file_path}")
-        except Exception as e:
-            logger.error(f"File deletion error: {e}")
+        if os.path.exists(file_path): 
+            os.remove(file_path)
 
 def format_timestamp(seconds):
-    """Formats seconds to HH:MM:SS format"""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    
-    if hours > 0:
-        return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
-    else:
-        return f"{minutes:02d}:{secs:02d}.{millis:03d}"
+    """Format: MM:SS.mmm"""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    millis = int((secs % 1) * 1000)
+    return f"{int(minutes):02d}:{int(secs):02d}.{millis:03d}"
 
 @app.route('/')
 def index():
@@ -324,87 +241,66 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'File not found'}), 400
+        logger.info(f"Upload request received. Files: {request.files.keys()}")
+        logger.info(f"Form data: {request.form}")
         
+        if 'file' not in request.files:
+            logger.error("No file in request")
+            return jsonify({'error': 'File not found'}), 400
+            
         file = request.files['file']
-        language = request.form.get('language', 'uk')
-        model_size = request.form.get('model_size', 'base')
         
         if file.filename == '':
+            logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
-        
+            
         if not allowed_file(file.filename):
-            return jsonify({'error': 'Unsupported file format'}), 400
+            logger.error(f"Invalid file type: {file.filename}")
+            return jsonify({'error': 'Unsupported format. Allowed: ' + ', '.join(ALLOWED_EXTENSIONS)}), 400
+        
+        language = request.form.get('language', 'auto')
+        model_size = request.form.get('model_size', 'base')
+        max_words = request.form.get('max_words', 5)
         
         task_id = str(int(time.time() * 1000))
-        
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{task_id}_{filename}")
+        
+        logger.info(f"Saving file to: {file_path}")
         file.save(file_path)
         
-        logger.info(f"File saved: {file_path}")
+        file_size = os.path.getsize(file_path)
+        logger.info(f"File saved successfully. Size: {file_size} bytes")
         
         file_ext = filename.rsplit('.', 1)[1].lower()
-        if file_ext in {'mp4', 'avi', 'mkv', 'webm'}:
+        if file_ext in {'mp4', 'avi', 'mkv', 'webm', 'mov'}:
             audio_path = file_path.rsplit('.', 1)[0] + '.wav'
-            progress_data[task_id] = {
-                'status': 'converting',
-                'progress': 5,
-                'message': 'Converting video to audio...'
-            }
+            logger.info(f"Converting video to audio: {file_ext} -> wav")
             if extract_audio(file_path, audio_path):
                 os.remove(file_path)
                 file_path = audio_path
+                logger.info("Video converted successfully")
             else:
-                return jsonify({'error': 'Video conversion error. Check if FFmpeg is installed.'}), 500
+                logger.error("FFmpeg conversion failed")
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return jsonify({'error': 'FFmpeg error. Please install FFmpeg or use audio file directly'}), 500
         
-        thread = threading.Thread(
-            target=transcribe_audio,
-            args=(file_path, language, model_size, task_id),
-            daemon=True
-        )
-        thread.start()
-        
+        threading.Thread(target=transcribe_audio, args=(file_path, language, model_size, task_id, max_words), daemon=True).start()
+        logger.info(f"Transcription started. Task ID: {task_id}")
         return jsonify({'task_id': task_id})
-    
+        
     except Exception as e:
-        logger.error(f"Upload error: {e}", exc_info=True)
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        logger.error(f"Upload error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/progress/<task_id>')
 def get_progress(task_id):
-    if task_id in progress_data:
-        return jsonify(progress_data[task_id])
-    return jsonify({'status': 'not_found', 'progress': 0, 'message': 'Task not found'}), 404
+    return jsonify(progress_data.get(task_id, {'status': 'not_found'}))
 
-@app.route('/health')
-def health():
-    """Server health check"""
-    return jsonify({'status': 'ok', 'models_loaded': list(models_cache.keys())})
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'error': f'File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.0f} MB'}), 413
 
 if __name__ == '__main__':
-    try:
-        import numpy as np
-        logger.info(f"NumPy version: {np.__version__}")
-    except ImportError:
-        logger.error("NumPy not installed! Install: pip install numpy")
-        sys.exit(1)
-    
-    try:
-        import librosa
-        logger.info(f"librosa version: {librosa.__version__} (for accurate speech boundary detection)")
-    except ImportError:
-        logger.warning("librosa is not installed. Basic algorithm will be used.")
-        logger.warning("For better results install: pip install librosa")
-    
-    try:
-        logger.info(f"OpenAI Whisper loaded successfully")
-    except Exception as e:
-        logger.error(f"Whisper error: {e}")
-        sys.exit(1)
-    
-    logger.info("Server starting on http://0.0.0.0:5000")
-    logger.info("Access from phone: http://<your-computer-IP>:5000")
-    
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
