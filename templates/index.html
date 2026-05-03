@@ -638,7 +638,9 @@
                     <option value="base" selected>Base (Optimal)</option>
                     <option value="small">Small (Accurate)</option>
                     <option value="medium">Medium (Very Accurate)</option>
-                    <option value="large">Large (Most Accurate)</option>
+                    <option value="large-v2">Large v2 (Most Accurate)</option>
+                    <option value="large-v3">Large v3 (Most Accurate)</option>
+                    <option value="large-v3-turbo">Large v3 Turbo (Very Fast & Accurate)</option>
                 </select>
             </div>
             
@@ -919,6 +921,10 @@
         }
         if (progressCheckInterval) {
             clearTimeout(progressCheckInterval);
+            }
+
+        if (currentTaskId) {
+            fetch(`/cancel/${currentTaskId}`, { method: 'POST' }).catch(e => console.error(e));
         }
         showError('Processing cancelled by user');
         resetUI();

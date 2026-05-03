@@ -1,6 +1,7 @@
 import os
 import sys
-import whisper
+# Замість старого whisper використовуємо faster_whisper
+from faster_whisper import WhisperModel
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import threading
@@ -52,11 +53,11 @@ def extract_audio(video_path, audio_path):
         return False
 
 def load_whisper_model(model_size="base"):
-    """Loads Whisper model with caching"""
+    """Loads Faster-Whisper model with caching. Optimized for the processor (int8)"""
     try:
         if model_size not in models_cache:
-            logger.info(f"Loading Whisper model: {model_size}")
-            models_cache[model_size] = whisper.load_model(model_size)
+            logger.info(f"Loading Faster-Whisper model: {model_size}")
+            models_cache[model_size] = WhisperModel(model_size, device="auto", compute_type="int8")
             logger.info(f"Model {model_size} loaded successfully")
         return models_cache[model_size]
     except Exception as e:
@@ -180,43 +181,84 @@ def format_timestamp_srt(seconds):
     millis = int((secs % 1) * 1000)
     return f"{int(hours):02d}:{int(minutes):02d}:{int(secs):02d},{millis:03d}"
 
+# ОНОВЛЕНА ФУНКЦІЯ: Тепер відстежує прогрес та перевіряє статус скасування
 def transcribe_audio(file_path, language, model_size, task_id, max_words):
-    """Main transcription process with dynamic segment length"""
+    """Main transcription process with dynamic segment length and cancellation check"""
     try:
-        progress_data[task_id] = {'status': 'loading_model', 'progress': 10, 'message': 'Loading model...'}
+        progress_data[task_id] = {'status': 'loading_model', 'progress': 5, 'message': 'Loading model...'}
         model = load_whisper_model(model_size)
         
         should_split = int(max_words) < 25
         
-        progress_data[task_id] = {'status': 'processing', 'progress': 30, 'message': 'Processing audio...'}
+        progress_data[task_id] = {'status': 'processing', 'progress': 10, 'message': 'Starting audio processing...'}
         
         transcribe_options = {
-            'verbose': False,
-            'task': 'transcribe',
+            'beam_size': 5,
             'word_timestamps': True
         }
         if language and language != 'auto':
             transcribe_options['language'] = language
         
-        result = model.transcribe(file_path, **transcribe_options)
+        # Перевірка перед початком
+        if progress_data[task_id].get('status') == 'cancelled':
+            logger.info(f"Task {task_id} cancelled before processing")
+            return
+            
+        # Faster-whisper повертає генератор та інфо
+        segments_generator, info = model.transcribe(file_path, **transcribe_options)
+        duration = info.duration
         
-        raw_segments = result.get('segments', [])
+        raw_segments = []
+        
+        # Цикл обробки дозволяє динамічно оновлювати прогрес
+        for segment in segments_generator:
+            # Перевірка статусу на кожному кроці
+            if progress_data[task_id].get('status') == 'cancelled':
+                logger.info(f"Task {task_id} cancelled by user during processing")
+                return # Виходимо з потоку миттєво
+
+            # Перетворюємо об'єкт faster-whisper в словник для сумісності з вашими старими функціями
+            segment_dict = {
+                'start': segment.start,
+                'end': segment.end,
+                'text': segment.text,
+                'words': [{'word': w.word, 'start': w.start, 'end': w.end} for w in segment.words] if segment.words else []
+            }
+            raw_segments.append(segment_dict)
+            
+            # Динамічний розрахунок прогресу (масштабуємо від 10% до 70%)
+            current_percent = min(100, int((segment.end / duration) * 100))
+            mapped_progress = 10 + int(current_percent * 0.6)
+            
+            progress_data[task_id] = {
+                'status': 'processing', 
+                'progress': mapped_progress, 
+                'message': f'Transcribing... {current_percent}%'
+            }
+
+        # Перевірки скасування між етапами рефайнінгу
+        if progress_data[task_id].get('status') == 'cancelled': return
 
         if should_split:
             limit = int(max_words)
-            progress_data[task_id] = {'status': 'refining', 'progress': 70, 'message': f'Splitting into {limit} words...'}
+            progress_data[task_id] = {'status': 'refining', 'progress': 75, 'message': f'Splitting into {limit} words...'}
             processed_segments = split_segments_by_length(raw_segments, max_words=limit, max_chars=limit*7)
         else:
-            progress_data[task_id] = {'status': 'refining', 'progress': 70, 'message': 'Refining original segments...'}
+            progress_data[task_id] = {'status': 'refining', 'progress': 75, 'message': 'Refining original segments...'}
             processed_segments = raw_segments
-        
+            
+        if progress_data[task_id].get('status') == 'cancelled': return
+
+        progress_data[task_id] = {'status': 'refining', 'progress': 85, 'message': 'Refining speech boundaries...'}
         refined_segments = detect_speech_boundaries(file_path, processed_segments)
         
+        if progress_data[task_id].get('status') == 'cancelled': return
+
         progress_data[task_id] = {'status': 'completed', 'progress': 100, 'message': 'Done!', 'result': {
-            'full_text': result['text'].strip(),
+            'full_text': " ".join([s['text'].strip() for s in refined_segments]),
             'timestamped_text': '\n'.join([f"[{format_timestamp(s['start'])} → {format_timestamp(s['end'])}] {s['text']}" for s in refined_segments]),
             'srt_subtitles': generate_srt(refined_segments),
-            'detected_language': result.get('language', 'unknown'),
+            'detected_language': info.language,
             'segments_count': len(refined_segments)
         }}
         
@@ -237,6 +279,16 @@ def format_timestamp(seconds):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# НОВИЙ МАРШРУТ: Обробляє запит на скасування від користувача
+@app.route('/cancel/<task_id>', methods=['POST'])
+def cancel_task(task_id):
+    if task_id in progress_data:
+        progress_data[task_id]['status'] = 'cancelled'
+        progress_data[task_id]['message'] = 'Cancelled by user'
+        logger.info(f"Cancellation signal received for task {task_id}")
+        return jsonify({'success': True})
+    return jsonify({'error': 'Task not found'}), 404
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -285,6 +337,9 @@ def upload_file():
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 return jsonify({'error': 'FFmpeg error. Please install FFmpeg or use audio file directly'}), 500
+        
+        # Ініціалізуємо статус перед запуском потоку
+        progress_data[task_id] = {'status': 'pending', 'progress': 0, 'message': 'Starting thread...'}
         
         threading.Thread(target=transcribe_audio, args=(file_path, language, model_size, task_id, max_words), daemon=True).start()
         logger.info(f"Transcription started. Task ID: {task_id}")
