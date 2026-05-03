@@ -83,9 +83,11 @@ sudo apt-get install ffmpeg
 ```
 ### Installing the Application
 
-1. **Clone the repository:**
+1. **Clone the repository and open the folder:**
 ```bash
 git clone https://github.com/BlackPencil-69/Subtitles-and-text-whisper.git
+```
+```bash
 cd Subtitles-and-text-whisper
 ```
 2. **Create a virtual environment:**
